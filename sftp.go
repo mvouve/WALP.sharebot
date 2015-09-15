@@ -7,15 +7,33 @@ import (
   "log"
 )
 
-func connect(addr string, name string, pass string)(*sftp.Client){
-  ssh := ssh_connect(addr, name, pass)
-  conn := new_sftp(ssh)
-  fmt.Printf(addr + name + pass)
-
-  return conn
+struct sftpConn {
+  client *sftp.Client
+  username string
+  password string
+  addr string
 }
 
-func ssh_connect(addr string, name string, pass string)(*ssh.Client){
+// connect connects to the sftp server based on user credentials
+func (s *sftpConn) connect() error {
+  ssh, err := sshConnect(s.addr, s.name, s.auth)
+  if err != nil {
+    return err
+  }
+
+  s.client, err := sftp.NewClient(ssh)
+  if err != nil {
+    return err
+  }
+}
+
+func (s *sftpConn) readDir(dir string) os.FileInfo, error
+{
+  return s.ReadDir(dir);
+}
+
+// sshConnect initialises the SSH connection to the remote server.
+func sshConnect(addr string, name string, pass string)(*ssh.Client, error){
   // configure connection
   config := &ssh.ClientConfig{
     User: name,
@@ -29,13 +47,4 @@ func ssh_connect(addr string, name string, pass string)(*ssh.Client){
     }
 
     return client
-}
-
-func new_sftp(ssh *ssh.Client)(*sftp.Client){
-  ret, err := sftp.NewClient(ssh)
-  if err != nil{
-    log.Fatal("Failed to initialise SFTP error: " + err.Error())
-  }
-
-  return ret
 }
