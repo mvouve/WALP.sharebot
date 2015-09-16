@@ -29,31 +29,34 @@ package main
 import (
   "os";
   "fmt";
-  "github.com/pkg/sftp";
+  "log";
+  "container/list"
 )
 
 // file system to move files to.
 type writeFileSystem interface
 {
   // connect initialises a connection to a some sort of file share
-  connect(addr string, name string, auth string)
+  connect()
   // find returns true if a file matches the description provided
   find(fname string, fsize int, fdate int) bool
   // addFile adds a file to the file system based on name
 
   // close closes the connection and cleans up the fs
+  close()
 }
 
 // file system to connect to
 type readFileSystem interface
 {
-  connect(addr string, name string, auth string) error
+  connect() error
   // readDir reads the files from that connection and returns os.FileInfo
   readDir(dir string) (os.FileInfo, error)
   // getFile gets a file from the file system based off file name
   getFile(name string)
 
   // close closes and cleans up the connection
+  close()
 }
 // notification interface
 type notifier interface
@@ -71,30 +74,29 @@ func main(){
     fmt.Println("Invalid: Correct usage: " + os.Args[0] + " [address:portno] [username] [password]")
   }
 
-  readFS:= &sftpConn{username: os.Arg[1], password: os.Arg[2], addr: os.Arg[3]}
-  err := readFileSystem.connect()
-  if err != nil
-  {
+  readFS:= &sftpConn{username: os.Args[1], password: os.Args[2], addr: os.Args[3]}
+  err := readFS.connect()
+  if err != nil {
     log.Fatalf("Error faild to initialise read file system: %v", err.Error())
   }
-  defer readFileSystem.close()
+  defer readFS.close()
 
   writeFS := &googleDrive{}
-  err := writeFS.connect()
+  err = writeFS.connect()
   if err != nil {
     log.Fatalf("Error faild to initialise write file system: %v", err.Error())
   }
   defer writeFS.close()
 
   notifier := &slack{}
-  err := notifier.connect()
+  err = notifier.connect()
   if err != nil {
     log.Fatalf("Error faild to initialise notifier: %v", err.Error())
   }
   defer notifier.close()
 
-  files := readFS.readDir(os.Args[5])
-  newfiles = new(List)
+  files, _ := readFS.readDir(os.Args[5])
+  newfiles := list.New()
 
   for _ , i :=  range files {
     if !writeFS.exists(i.Name()) {

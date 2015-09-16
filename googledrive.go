@@ -17,20 +17,26 @@ import (
   "google.golang.org/api/drive/v2"
 )
 
+type googleDrive struct {
+
+}
 
 //connect_fs provides a connection to google drive
-func connectFS(){
+func (g *googleDrive) connect() error {
   ctx := context.Background()
 
   b, err := ioutil.ReadFile("drive.json")
   if err != nil {
     log.Fatalf("unable to read drive.json %v", err)
+
+    return err
   }
-  defer b.Close()
 
   config, err := google.ConfigFromJSON(b, drive.DriveScope)
   if err != nil {
     log.Fatalf("Unable to parce client secret file to config %v", err)
+
+    return err
   }
 
   client := getClient(ctx, config)
@@ -38,7 +44,15 @@ func connectFS(){
   srv, err := drive.New(client)
   if err != nil {
     log.Fatalf("Unable to retrieve Client %v", err)
+
+    return err
   }
+
+  return nil
+}
+
+func (g *googleDrive) close(){
+
 }
 
 
