@@ -27,85 +27,81 @@ shares, or other chat interfaces.
 package main
 
 import (
-  "os";
-  "fmt";
-  "log";
-  "container/list"
+	"container/list"
+	"log"
+	"os"
 )
 
 // file system to move files to.
-type writeFileSystem interface
-{
-  // connect initialises a connection to a some sort of file share
-  connect()
-  // find returns true if a file matches the description provided
-  exists(fname string, fsize int, fdate int) bool
-  // addFile adds a file to the file system based on name
+type writeFileSystem interface {
+	// connect initialises a connection to a some sort of file share
+	connect()
+	// find returns true if a file matches the description provided
+	exists(fname string, fsize int, fdate int) bool
+	// addFile adds a file to the file system based on name
 
-  // close closes the connection and cleans up the fs
-  close()
+	// close closes the connection and cleans up the fs
+	close()
 }
 
 // file system to connect to
-type readFileSystem interface
-{
-  connect() error
-  // readDir reads the files from that connection and returns os.FileInfo
-  readDir(dir string) (os.FileInfo, error)
-  // getFile gets a file from the file system based off file name
-  getFile(name string)
-
-  // close closes and cleans up the connection
-  close()
+type readFileSystem interface {
+	connect() error
+	// readDir reads the files from that connection and returns os.FileInfo
+	//readDir(dir string) (os.FileInfo, error)
+	// getFile gets a file from the file system based off file name
+	//get(path string) (*os.File, error)
+	// close closes and cleans up the connection
+	close()
 }
+
 // notification interface
-type notifier interface
-{
-  connect()
-  alert(alert string)
+type notifier interface {
+	connect()
+	alert(alert string)
 }
 
 // main starts the program.
 //
 // if a contributer would wish to create a new readFileSystem/writeFileSystem/notifier
 // they could add it here. where the construct is initialised.
-func main(){
-  if len(os.Args) != 5 {  // req 4 args addr, user, pass
-    fmt.Println("Invalid: Correct usage: " + os.Args[0] + " [address:portno] [username] [password]")
-  }
+func main() {
+	if len(os.Args) != 5 {
+		log.Fatalf("Invalid: Correct usage: " + os.Args[0] + " [address:portno] [username] [password]")
+	}
 
-  readFS:= &sftpConn{username: os.Args[1], password: os.Args[2], addr: os.Args[3]}
-  err := readFS.connect()
-  if err != nil {
-    log.Fatalf("Error faild to initialise read file system: %v", err.Error())
-  }
-  defer readFS.close()
+	readFS := &sftpConn{username: os.Args[1], password: os.Args[2], addr: os.Args[3]}
+	err := readFS.connect()
+	if err != nil {
+		log.Fatalf("Error faild to initialise read file system: %v", err.Error())
+	}
+	defer readFS.close()
 
-  writeFS := &googleDrive{}
-  err = writeFS.connect()
-  if err != nil {
-    log.Fatalf("Error faild to initialise write file system: %v", err.Error())
-  }
-  defer writeFS.close()
+	writeFS := &googleDrive{}
+	err = writeFS.connect()
+	if err != nil {
+		log.Fatalf("Error faild to initialise write file system: %v", err.Error())
+	}
+	defer writeFS.close()
 
-  notifier := &slack{}
-  err = notifier.connect()
-  if err != nil {
-    log.Fatalf("Error faild to initialise notifier: %v", err.Error())
-  }
-  defer notifier.close()
+	notifier := &slack{}
+	err = notifier.connect()
+	if err != nil {
+		log.Fatalf("Error faild to initialise notifier: %v", err.Error())
+	}
+	defer notifier.close()
 
-  files, _ := readFS.readDir(os.Args[5])
-  newfiles := list.New()
+	files, _ := readFS.readDir(os.Args[5])
+	newfiles := list.New()
 
-  for _, i := range files {
-    if !writeFS.exists(i.Name(), i.Size()) {
-      f, err := readFS.get(i.Name())
-      if err != nil {
-        log.Println("File disappeared between match and fetch")
-      }
-      writeFS.add(f)
-      newfiles.PushBack(i.Name())
-    }
-  }
+	for _, i := range files {
+		if !writeFS.exists(i.Name(), i.Size()) {
+			f, err := readFS.get(i.Name())
+			if err != nil {
+				log.Println("File disappeared between match and fetch")
+			}
+			writeFS.add(f)
+			newfiles.PushBack(i.Name())
+		}
+	}
 }

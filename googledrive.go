@@ -18,11 +18,11 @@ import (
 )
 
 type googleDrive struct {
-	srv     *drive.Service
-	fileSrv *drive.FilesService
+	srv *drive.Service
 }
 
 //connect_fs provides a connection to google drive
+// on failure it returns the error provided by the failing call.
 func (g *googleDrive) connect() error {
 	ctx := context.Background()
 
@@ -50,7 +50,6 @@ func (g *googleDrive) connect() error {
 	}
 
 	g.srv = srv
-	g.fileSrv = drive.NewFilesService(srv)
 
 	return nil
 }
@@ -63,14 +62,45 @@ func (g *googleDrive) exists(fname string, fsize int64) bool {
 	return true
 }
 
+// add adds a os.File to google drive.
 func (g *googleDrive) add(file *os.File) {
-	g.fileSrv.Insert(file)
+	fs := drive.NewFilesService(g.srv)
+	f := &drive.File{}
+	is := fs.Insert(f)
+	is.Media(file)
+
+	go is.Do()
 }
 
-/**
+func (g *googleDrive) getId(path string) ([]*drive.File, error) {
+	var fs []*drive.File
+	pageToken := ""
+	for {
+		q := g.srv.Files.List()
+		if pageToken != "" {
+			q = q.PageToken(pageToken)
+		}
+		r, err := q.Do()
+		if err != nil {
+			fmt.Printf("An error occurred: %v", err)
+
+			return fs, err
+		}
+		fs = append(fs, r.Items...)
+		pageToken = r.NextPageToken
+		if pageToken == "" {
+			break
+		}
+
+	}
+
+	return fs, nil
+}
+
+/*******************************************************************************
 THE FOLLOWING FUNCTIONS WERE RETREIVED FROM
 https://developers.google.com/drive/web/quickstart/go
-**/
+*******************************************************************************/
 
 // getClient uses a Context and Config to retrieve a Token
 // then generate a Client. It returns the generated Client.
