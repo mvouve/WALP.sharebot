@@ -39,7 +39,7 @@ type writeFileSystem interface
   // connect initialises a connection to a some sort of file share
   connect()
   // find returns true if a file matches the description provided
-  find(fname string, fsize int, fdate int) bool
+  exists(fname string, fsize int, fdate int) bool
   // addFile adds a file to the file system based on name
 
   // close closes the connection and cleans up the fs
@@ -98,10 +98,14 @@ func main(){
   files, _ := readFS.readDir(os.Args[5])
   newfiles := list.New()
 
-  for _ , i :=  range files {
-    if !writeFS.exists(i.Name()) {
-      writeFS.add(readFS.get(i.Name()))
-      newfiles.pushBack(i.Name())
+  for _, i := range files {
+    if !writeFS.exists(i.Name(), i.Size()) {
+      f, err := readFS.get(i.Name())
+      if err != nil {
+        log.Println("File disappeared between match and fetch")
+      }
+      writeFS.add(f)
+      newfiles.PushBack(i.Name())
     }
   }
 }

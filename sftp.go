@@ -34,7 +34,7 @@ func (s *sftpConn) connect() error {
   return nil
 }
 
-func (s *sftpConn) readDir(dir string) (os.FileInfo, error){
+func (s *sftpConn) readDir(dir string) ([]os.FileInfo, error){
   return s.readDir(dir);
 }
 
@@ -58,4 +58,10 @@ func sshConnect(addr string, name string, pass string)(*ssh.Client, error){
 func (s *sftpConn) close() {
   s.client.Close();
   s.ssh.Close();
+}
+
+
+func (s *sftpConn) get(path string) (*os.File, error){
+
+  return os.Open(path);
 }
